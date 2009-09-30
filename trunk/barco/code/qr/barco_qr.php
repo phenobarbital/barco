@@ -18,7 +18,6 @@ class barco_qr extends barco_code {
 
 	#data to be encoded
 	protected $_data = null;
-	protected $_length = 0;
 
 	protected $_datadir = 'data';
 	protected $_imgdir = 'image';
@@ -36,7 +35,8 @@ class barco_qr extends barco_code {
 	protected $_size = 4;
 
 	#vesion dimension of image (1-40)
-	protected $_version = 40;
+	protected $_version = 0;
+	
 	#tipo de imagen (jpeg:png)
 	protected $_imgtype = 'png';
 
@@ -71,6 +71,35 @@ class barco_qr extends barco_code {
 		}
 		return $this;
 	}
+	
+	public function parity($parity = 255) {
+		if ($parity > 255 || $parity < 0) {
+			$this->_parity = 0;
+			return $this;
+		}
+		if ($parity > 0 && $parity < 255) {
+			$this->_parity = $parity;
+		}
+		return $this;
+	}
+	
+	/**
+	 * Tipo de imagen (png|jpeg)
+	 *
+	 * @param string $type
+	 * @return barco_qr $this
+	 */
+	public function type($type = 'jpeg') {
+		if ($type == 'jpeg' || $type == 'png') {
+			$this->_imgtype = $type;
+			$this->_size = 8;
+		} else {
+			$this->_imgtype = 'png';
+			$this->_size = 4;
+		}
+		return $this;
+	}
+	
 
 	public function module($module = 4) {
 		if ($module == 4) {
@@ -133,9 +162,10 @@ class barco_qr extends barco_code {
 			throw new exception('Barco QR error: empty data');
 			return false;
 		}
-		$version_ul=40;              /* upper limit for version  */
+		/* upper limit for version  */
+		$version_ul=40;
+		
 		/* ------ setting area end ------ */
-
 
 		$qrcode_data_string= $this->_data;
 		$qrcode_error_correct= $this->_ecc;
@@ -729,13 +759,18 @@ class barco_qr extends barco_code {
 		}
 	}
 
+	/**
+	 * retorna el raw de bytes de la imagen
+	 *
+	 * @return byte $output
+	 */
 	public function raw() {
 		if ($this->_imgtype == "jpeg"){
 			imagejpeg($this->output);
 		} else {
 			imagepng($this->output);
 		}
-		echo $this->output;
+		return $this->output;
 	}
 
 }
