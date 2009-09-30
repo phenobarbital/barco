@@ -1,0 +1,26 @@
+BARCO for PHP ver. 0.1
+Barco PHP es un proyecto que pretende unificar en una sola librería la capacidades de generar y decodificar codigos de barra (barcodes) utilizando una API unificada.
+Barco es Software Libre y se distribuye "como es" bajo los términos de la GPL v.2
+
+Las secciones sobre Q-Code son adaptaciones para OO y PHP5 del script original proveído por:
+
+Copyright (c)2000-2005, Y.Swetake (Japón)
+All Rights Reserved. 
+
+Las secciones sobre code39 y UPCS usan fuentes (TTF) abiertas de dominio público
+
+Los generadores para otros tipos de Barcode son adaptaciones proveídas por:
+
+Copyright (C) Jean-Sebastien Goupil
+See also: http://other.lookstrike.com/barcode/
+
+El Scanner de códigos de barra es una adaptación OOP y PHP5 de script original de scanner proveído por:
+Copyright (C) Stanley Sufficool 10-06-2007
+See Also: Barbara Scanner
+
+Barco 0.1 Requiere:
+PHP5
+PHP5-imagick
+PHP5-GD2
+
+Install: ver INSTALL
