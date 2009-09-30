@@ -1,19 +1,26 @@
 <?php
-# [useage]
-#   qr_img.php?d=[data]&e=[(L,M,Q,H)]&s=[int]&v=[(1-40)]
-#             (&m=[(1-16)]&n=[(2-16)](&p=[(0-255)],&o=[data]))
 #
-#   d= data         URL encoded data.
-#   e= ECC level    L or M or Q or H   (default M)
-#   s= module size  (dafault PNG:4 JPEG:8)
-#   v= version      1-40 or Auto select if you do not set.
-#   t= image type   J:jpeg image , other: PNG image
-#
+#   ECC level    L or M or Q or H   (default M)
+#   module size  (dafault PNG:4 JPEG:8)
+#   version      1-40 or Auto select if you do not set.
+#   image type   J:jpeg image , other: PNG image
 #  structured append  m of n (experimental)
-#   n= structure append n (2-16)
-#   m= structure append m (1-16)
-#   p= parity
-#   o= original data (URL encoded data)  for calculating parity
+#   structure append n (2-16)
+#   structure append m (1-16)
+#   parity
+
+/**
+ * Barco_QR: generate a QR (Quick Response) Code
+ * @access public
+ * @author Jesus Lara <jesuslara@gmail.com>
+ * @copyright Y.Swetake <swe@venus.dti.ne.jp>
+ * @see also http://www.swetake.com/
+ * @filesource http://code.google.com/p/barco/
+ * @version 0.6
+ * @package Barco
+ * @subpackage barco_qr
+ *
+ */
 class barco_qr extends barco_code {
 
 	#data to be encoded
@@ -25,6 +32,7 @@ class barco_qr extends barco_code {
 	#factores del code QR
 
 	#dimension maxima de QR
+	/* upper limit for version  */
 	protected $version_ul = 40;
 
 	#ECC Level error L:M:Q:H
@@ -34,9 +42,9 @@ class barco_qr extends barco_code {
 	#module size PNG:4 JPEG:8
 	protected $_size = 4;
 
-	#vesion dimension of image (1-40)
-	protected $_version = 0;
-	
+	#vesion dimension of image (1-40) (null: auto-select)
+	protected $_version = null;
+
 	#tipo de imagen (jpeg:png)
 	protected $_imgtype = 'png';
 
@@ -71,7 +79,7 @@ class barco_qr extends barco_code {
 		}
 		return $this;
 	}
-	
+
 	public function parity($parity = 255) {
 		if ($parity > 255 || $parity < 0) {
 			$this->_parity = 0;
@@ -82,7 +90,7 @@ class barco_qr extends barco_code {
 		}
 		return $this;
 	}
-	
+
 	/**
 	 * Tipo de imagen (png|jpeg)
 	 *
@@ -99,7 +107,7 @@ class barco_qr extends barco_code {
 		}
 		return $this;
 	}
-	
+
 
 	public function module($module = 4) {
 		if ($module == 4) {
@@ -158,78 +166,43 @@ class barco_qr extends barco_code {
 	 * @return none
 	 */
 	public function generate() {
+
 		if (empty($this->_data)) {
 			throw new exception('Barco QR error: empty data');
 			return false;
 		}
-		/* upper limit for version  */
-		$version_ul=40;
-		
+
 		/* ------ setting area end ------ */
-
-		$qrcode_data_string= $this->_data;
-		$qrcode_error_correct= $this->_ecc;
-		$qrcode_module_size= $this->_size;
-		$qrcode_version= $this->_version;
-		$qrcode_image_type= $this->_imgtype;
-
-		$qrcode_structureappend_n= $this->_n;
-		$qrcode_structureappend_m= $this->_m;
-		$qrcode_structureappend_parity= $this->_parity;
-		
-		#data
-		$qrcode_structureappend_originaldata= $this->_data;
-
-
-		if (($qrcode_image_type=="J")||($qrcode_image_type=="j")){
-			$qrcode_image_type="jpeg";
-		}else {
-			$qrcode_image_type="png";
+		$data_length = strlen($this->_data);
+		if ($data_length <= 0) {
+			throw new exception("Barco QR: Data do not exist.");
+			return false;
 		}
 
-		if ($qrcode_module_size>0) {
-		} else {
-			if ($qrcode_image_type=="jpeg"){
-				$qrcode_module_size=8;
-			} else {
-				$qrcode_module_size=4;
-			}
-		}
-		$qrcode_data_string=rawurldecode($qrcode_data_string);
-		$data_length=strlen($qrcode_data_string);
-		if ($data_length<=0) {
-			trigger_error("QRcode : Data do not exist.",E_USER_ERROR);
-			exit;
-		}
 		$data_counter=0;
-		if ($qrcode_structureappend_n>1
-		&& $qrcode_structureappend_n<=16
-		&& $qrcode_structureappend_m>0
-		&& $qrcode_structureqppend_m<=16){
+		if ($this->_n>1	&& $this->_n<=16 && $this->_m>0	&& $this->_m<=16) {
 
 			$data_value[0]=3;
 			$data_bits[0]=4;
 
-			$data_value[1]=$qrcode_structureappend_m-1;
+			$data_value[1]=$this->_m-1;
 			$data_bits[1]=4;
 
-			$data_value[2]=$qrcode_structureappend_n-1;
+			$data_value[2]=$this->_n-1;
 			$data_bits[2]=4;
 
-
-			$originaldata_length=strlen($qrcode_structureappend_originaldata);
-			if ($originaldata_length>1){
-				$qrcode_structureappend_parity=0;
+			$originaldata_length = strlen($this->_data);
+			if ($originaldata_length > 1){
+				$this->_parity= 0;
 				$i=0;
 				while ($i<$originaldata_length){
-					$qrcode_structureappend_parity=($qrcode_structureappend_parity ^ ord(substr($qrcode_structureappend_originaldata,$i,1)));
+					$this->_parity=($this->_parity ^ ord(substr($this->_data,$i,1)));
 					$i++;
 				}
 			}
 
-			$data_value[3]=$qrcode_structureappend_parity;
+			$data_value[3]=$this->_parity;
 			$data_bits[3]=8;
-
 			$data_counter=4;
 		}
 
@@ -237,8 +210,8 @@ class barco_qr extends barco_code {
 
 		/*  --- determine encode mode */
 
-		if (ereg("[^0-9]",$qrcode_data_string)){
-			if (ereg("[^0-9A-Z \$\*\%\+\-\.\/\:]",$qrcode_data_string)) {
+		if (ereg("[^0-9]",$this->_data)){
+			if (ereg("[^0-9A-Z \$\*\%\+\-\.\/\:]",$this->_data)) {
 
 				/*  --- 8bit byte mode */
 
@@ -255,7 +228,7 @@ class barco_qr extends barco_code {
 				$data_counter++;
 				$i=0;
 				while ($i<$data_length){
-					$data_value[$data_counter]=ord(substr($qrcode_data_string,$i,1));
+					$data_value[$data_counter]=ord(substr($this->_data,$i,1));
 					$data_bits[$data_counter]=8;
 					$data_counter++;
 					$i++;
@@ -286,10 +259,10 @@ class barco_qr extends barco_code {
 				$data_counter++;
 				while ($i<$data_length){
 					if (($i %2)==0){
-						$data_value[$data_counter]=$alphanumeric_character_hash[substr($qrcode_data_string,$i,1)];
+						$data_value[$data_counter]=$alphanumeric_character_hash[substr($this->_data,$i,1)];
 						$data_bits[$data_counter]=6;
 					} else {
-						$data_value[$data_counter]=$data_value[$data_counter]*45+$alphanumeric_character_hash[substr($qrcode_data_string,$i,1)];
+						$data_value[$data_counter]=$data_value[$data_counter]*45+$alphanumeric_character_hash[substr($this->_data,$i,1)];
 						$data_bits[$data_counter]=11;
 						$data_counter++;
 					}
@@ -314,10 +287,10 @@ class barco_qr extends barco_code {
 			$data_counter++;
 			while ($i<$data_length){
 				if (($i % 3)==0){
-					$data_value[$data_counter]=substr($qrcode_data_string,$i,1);
+					$data_value[$data_counter]=substr($this->_data,$i,1);
 					$data_bits[$data_counter]=4;
 				} else {
-					$data_value[$data_counter]=$data_value[$data_counter]*10+substr($qrcode_data_string,$i,1);
+					$data_value[$data_counter]=$data_value[$data_counter]*10+substr($this->_data,$i,1);
 					if (($i % 3)==1){
 						$data_bits[$data_counter]=7;
 					} else {
@@ -337,20 +310,6 @@ class barco_qr extends barco_code {
 			$total_data_bits+=$data_bits[$i];
 			$i++;
 		}
-
-
-		$ecc_character_hash=array("L"=>"1",
-"l"=>"1",
-"M"=>"0",
-"m"=>"0",
-"Q"=>"3",
-"q"=>"3",
-"H"=>"2",
-"h"=>"2");
-
-		$ec=@$ecc_character_hash[$qrcode_error_correct];
-
-		if (!$ec){$ec=0;}
 
 		$max_data_bits_array=array(
 		0,128,224,352,512,688,864,992,1232,1456,1728,
@@ -373,55 +332,58 @@ class barco_qr extends barco_code {
 		4096,4544,4912,5312,5744,6032,6464,6968,7288,7880,
 		8264,8920,9368,9848,10288,10832,11408,12016,12656,13328
 		);
-		if (!is_numeric($qrcode_version)){
-			$qrcode_version=0;
+
+		if (!is_numeric($this->_version)){
+			$this->_version = 0;
 		}
-		if (!$qrcode_version){
+
+		if (!$this->_version) {
 			/* #--- auto version select */
-			$i=1+40*$ec;
+			$i=1+40*$this->ec;
 			$j=$i+39;
-			$qrcode_version=1;
+			$this->_version=1;
 			while ($i<=$j){
-				if (($max_data_bits_array[$i])>=$total_data_bits+$codeword_num_plus[$qrcode_version]     ){
+				if (($max_data_bits_array[$i])>=$total_data_bits+$codeword_num_plus[$this->_version]){
 					$max_data_bits=$max_data_bits_array[$i];
 					break;
 				}
 				$i++;
-				$qrcode_version++;
+				$this->_version++;
 			}
 		} else {
-			$max_data_bits=$max_data_bits_array[$qrcode_version+40*$ec];
+			$max_data_bits=$max_data_bits_array[$this->_version+40*$this->ec];
 		}
-		if ($qrcode_version>$version_ul){
-			trigger_error("QRcode : too large version.",E_USER_ERROR);
+		if ($this->_version > $this->version_ul){
+			throw new exception("Barco QR: too large version.");
+			return false;
 		}
 
-		$total_data_bits+=$codeword_num_plus[$qrcode_version];
-		$data_bits[$codeword_num_counter_value]+=$codeword_num_plus[$qrcode_version];
+		$total_data_bits+=$codeword_num_plus[$this->_version];
+		$data_bits[$codeword_num_counter_value]+=$codeword_num_plus[$this->_version];
 
 		$max_codewords_array=array(0,26,44,70,100,134,172,196,242,
 		292,346,404,466,532,581,655,733,815,901,991,1085,1156,
 		1258,1364,1474,1588,1706,1828,1921,2051,2185,2323,2465,
 		2611,2761,2876,3034,3196,3362,3532,3706);
 
-		$max_codewords=$max_codewords_array[$qrcode_version];
-		$max_modules_1side=17+($qrcode_version <<2);
+		$max_codewords=$max_codewords_array[$this->_version];
+		$max_modules_1side=17+($this->_version <<2);
 
 		$matrix_remain_bit=array(0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,
 		4,4,4,4,4,4,4,3,3,3,3,3,3,3,0,0,0,0,0,0);
 
 		/* ---- read version ECC data file */
 
-		$byte_num=$matrix_remain_bit[$qrcode_version]+($max_codewords << 3);
-		$filename= $this->_datadir ."/qrv".$qrcode_version."_".$ec.".dat";
-		$fp1 = fopen ($filename, "rb");
+		$byte_num=$matrix_remain_bit[$this->_version]+($max_codewords << 3);
+		$filename= $this->_datadir ."/qrv".$this->_version."_".$this->ec.".dat";
+		$fp1 = fopen($filename, "rb");
 		$matx=fread($fp1,$byte_num);
 		$maty=fread($fp1,$byte_num);
 		$masks=fread($fp1,$byte_num);
 		$fi_x=fread($fp1,15);
 		$fi_y=fread($fp1,15);
-		$rs_ecc_codewords=ord(fread($fp1,1));
-		$rso=fread($fp1,128);
+		$rs_ecc_codewords= ord(fread($fp1,1));
+		$rso= fread($fp1,128);
 		fclose($fp1);
 
 		$matrix_x_array=unpack("C*",$matx);
@@ -439,33 +401,32 @@ class barco_qr extends barco_code {
 		$max_data_codewords=($max_data_bits >>3);
 
 		$filename = $this->_datadir ."/rsc".$rs_ecc_codewords.".dat";
-		$fp0 = fopen ($filename, "rb");
+		$fp0 = fopen($filename, "rb");
 		$i=0;
 		while ($i<256) {
-			$rs_cal_table_array[$i]=fread ($fp0,$rs_ecc_codewords);
+			$rs_cal_table_array[$i]=fread($fp0,$rs_ecc_codewords);
 			$i++;
 		}
-		fclose ($fp0);
+		fclose($fp0);
 
 		/*  --- set terminator */
 
-		if ($total_data_bits<=$max_data_bits-4){
+		if ($total_data_bits<=$max_data_bits-4) {
 			$data_value[$data_counter]=0;
 			$data_bits[$data_counter]=4;
 		} else {
-			if ($total_data_bits<$max_data_bits){
+			if ($total_data_bits<$max_data_bits) {
 				$data_value[$data_counter]=0;
 				$data_bits[$data_counter]=$max_data_bits-$total_data_bits;
 			} else {
-				if ($total_data_bits>$max_data_bits){
-	    trigger_error("QRcode : Overflow error",E_USER_ERROR);
-	    exit;
+				if ($total_data_bits>$max_data_bits) {
+					throw new exception("Barco QR: Size too small, Data Overflow");
+					return false;
 				}
 			}
 		}
 
 		/* ----divide data by 8bit */
-
 		$i=0;
 		$codewords_counter=0;
 		$codewords[0]=0;
@@ -508,10 +469,9 @@ class barco_qr extends barco_code {
 		}
 
 		/* ----  set padding character */
-
 		if ($codewords_counter<$max_data_codewords-1){
 			$flag=1;
-			while ($codewords_counter<$max_data_codewords-1){
+			while ($codewords_counter<$max_data_codewords-1) {
 				$codewords_counter++;
 				if ($flag==1) {
 					$codewords[$codewords_counter]=236;
@@ -529,11 +489,9 @@ class barco_qr extends barco_code {
 		$rs_block_number=0;
 		$rs_temp[0]="";
 
-		while($i<$max_data_codewords){
-
+		while($i<$max_data_codewords) {
 			$rs_temp[$rs_block_number].=chr($codewords[$i]);
 			$j++;
-
 			if ($j>=$rs_block_order[$rs_block_number+1]-$rs_ecc_codewords){
 				$j=0;
 				$rs_block_number++;
@@ -607,7 +565,7 @@ class barco_qr extends barco_code {
 			$i++;
 		}
 
-		$matrix_remain=$matrix_remain_bit[$qrcode_version];
+		$matrix_remain=$matrix_remain_bit[$this->_version];
 		while ($matrix_remain){
 			$remain_bit_temp = $matrix_remain + ( $max_codewords <<3);
 			$matrix_content[ $matrix_x_array[$remain_bit_temp] ][ $matrix_y_array[$remain_bit_temp] ]  =  ( 255 ^ $mask_array[$remain_bit_temp] );
@@ -693,7 +651,7 @@ class barco_qr extends barco_code {
 
 		# --- format information
 
-		$format_information_value=(($ec << 3) | $mask_number);
+		$format_information_value=(($this->ec << 3) | $mask_number);
 		$format_information_array=array("101010000010010","101000100100101",
 "101111001111100","101101101001011","100010111111001","100000011001110",
 "100111110010111","100101010100000","111011111000100","111001011110011",
@@ -706,7 +664,6 @@ class barco_qr extends barco_code {
 		$i=0;
 		while ($i<15){
 			$content=substr($format_information_array[$format_information_value],$i,1);
-
 			$matrix_content[$format_information_x1[$i]][$format_information_y1[$i]]=$content * 255;
 			$matrix_content[$format_information_x2[$i+1]][$format_information_y2[$i+1]]=$content * 255;
 			$i++;
@@ -714,14 +671,16 @@ class barco_qr extends barco_code {
 
 
 		$mib=$max_modules_1side+8;
-		$qrcode_image_size= $mib*$qrcode_module_size;
+		$qrcode_image_size= $mib*$this->_size;
 		if ($qrcode_image_size > 1480){
-			trigger_error("QRcode : Too large image size",E_USER_ERROR);
+			throw new exception("Barco QR: Too large image size");
+			return false;
 		}
-		$this->output =imagecreate($qrcode_image_size,$qrcode_image_size);
-		$image_path= $this->_imgdir."/qrv".$qrcode_version.".png";
-		$base_image= imagecreatefrompng($image_path);
 		
+		$this->output = imagecreate($qrcode_image_size,$qrcode_image_size);
+		$image_path= $this->_imgdir."/qrv".$this->_version.".png";
+		$base_image= imagecreatefrompng($image_path);
+
 		$col[1]=imagecolorallocate($base_image,0,0,0);
 		$col[0]=imagecolorallocate($base_image,255,255,255);
 
@@ -733,7 +692,7 @@ class barco_qr extends barco_code {
 			$jj=0;
 			while ($j<$mxe){
 				if ($matrix_content[$ii][$jj] & $mask_content){
-					ImageSetPixel($base_image,$i,$j,$col[1]);
+					imagesetpixel($base_image,$i,$j,$col[1]);
 				}
 				$j++;
 				$jj++;
